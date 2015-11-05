@@ -103,6 +103,12 @@ SESSIONS_GET = endpoints.ResourceContainer(
     websafeConferenceKey=messages.StringField(1),
 )
 
+SESSIONS_GETBYTYPE = endpoints.ResourceContainer(
+    SessionForms, 
+    websafeConferenceKey=messages.StringField(1),
+    type=messages.StringField(2),
+)
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 
@@ -573,7 +579,7 @@ class ConferenceApi(remote.Service):
 # - - - Sessions - - - - - - - - - - - - - - - - - - - -
 
 
-    # getConferenceSessionsByType(websafeConferenceKey, typeOfSession) Given a conference, return all sessions of a specified type (eg lecture, keynote, workshop)
+    
     # getSessionsBySpeaker(speaker) -- Given a speaker, return all sessions given by this particular speaker, across all conferences
     
 
@@ -665,6 +671,23 @@ class ConferenceApi(remote.Service):
             raise endpoints.NotFoundException('No conference found with that key')
 
         sessions = Session.query(Session.websafeKey == request.websafeConferenceKey)
+        return SessionForms(
+            items=[self._copySessionToForm(session, conf.name) for session in sessions]
+        )
+
+
+# getConferenceSessionsByType(websafeConferenceKey, typeOfSession) Given a conference,
+# return all sessions of a specified type (eg lecture, keynote, workshop)
+    @endpoints.method(SESSIONS_GETBYTYPE, SessionForms, path='conference/{websafeConferenceKey}/sessions/{type}',
+            http_method='POST', name='getConferenceSessionsByType')
+    def getConferenceSessionsByType(self, request):
+        """Return sessions in a given conference of a particular type"""
+        conf = ndb.Key(urlsafe=request.websafeConferenceKey).get()
+        if not conf:
+            raise endpoints.NotFoundException('No conference found with that key')
+
+        sessions = Session.query(Session.websafeKey == request.websafeConferenceKey)
+        sessions = sessions.filter(Session.typeOfSession == request.type)
         return SessionForms(
             items=[self._copySessionToForm(session, conf.name) for session in sessions]
         )
