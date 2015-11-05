@@ -586,8 +586,14 @@ class ConferenceApi(remote.Service):
             raise endpoints.UnauthorizedException('Authorization required')
         user_id = getUserId(user)
 
+        # get Conference object from request; bail if not found
+        conf = ndb.Key(urlsafe=request.websafeConferenceKey).get()
+        if not conf:
+            raise endpoints.NotFoundException('No conference found with that key')
+
         # user must be conference owner to create sessions
-        # TO DO - code goes here
+        if user_id != conf.organizerUserId:
+            raise endpoints.ForbiddenException('Only the owner can create sessions.')
 
         if not request.name:
             raise endpoints.BadRequestException("Session 'name' field required")
@@ -597,12 +603,6 @@ class ConferenceApi(remote.Service):
         del data['websafeConferenceKey']        # how did that get in there?
         del data['conferenceName']              # in the form, but not the datastore class
         
-        # get Conference object from request; bail if not found
-        # conf = ndb.Key(urlsafe=request.websafeConferenceKey).get()
-        conf = ndb.Key(urlsafe=request.websafeConferenceKey).get()
-        if not conf:
-            raise endpoints.NotFoundException('No conference found with that key')
-
         # add default values for those missing (both data model & outbound Message)
         for df in SESSION_DEFAULTS:
             if data[df] in (None, []):
@@ -616,6 +616,9 @@ class ConferenceApi(remote.Service):
         if data['startTime']:
             data['startTime'] = datetime.strptime(data['startTime'][:5], "%H:%M").time()
             print data['startTime']
+
+        if data['date'] < conf.startDate or data['date'] > conf.endDate:
+            raise endpoints.BadRequestException("Session date not within conference's range")
 
         # generate Profile Key based on user ID and Conference
         # ID based on Profile key get Conference key from ID
