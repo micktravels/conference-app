@@ -622,7 +622,7 @@ class ConferenceApi(remote.Service):
         data['websafeKey'] = request.websafeConferenceKey
         p_key = ndb.Key(Profile, user_id)
         c_key = ndb.Key(urlsafe=request.websafeConferenceKey)
-        s_id = Session.allocate_ids(size=1, parent=p_key)[0]
+        s_id = Session.allocate_ids(size=1, parent=c_key)[0]
         s_key = ndb.Key(Session, s_id, parent=c_key)
         data['key'] = s_key
         
