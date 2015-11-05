@@ -38,6 +38,7 @@ from models import ConferenceQueryForms
 from models import TeeShirtSize
 from models import Session
 from models import SessionForm
+from models import SessionForms
 
 from settings import WEB_CLIENT_ID
 # from settings import ANDROID_CLIENT_ID
@@ -94,6 +95,11 @@ CONF_POST_REQUEST = endpoints.ResourceContainer(
 
 SESSION_CREATE = endpoints.ResourceContainer(
     SessionForm, 
+    websafeConferenceKey=messages.StringField(1),
+)
+
+SESSIONS_GET = endpoints.ResourceContainer(
+    SessionForms, 
     websafeConferenceKey=messages.StringField(1),
 )
 
@@ -566,21 +572,16 @@ class ConferenceApi(remote.Service):
 
 # - - - Sessions - - - - - - - - - - - - - - - - - - - -
 
-    # getConferenceSessions(websafeConferenceKey) -- Given a conference, return all sessions
+
     # getConferenceSessionsByType(websafeConferenceKey, typeOfSession) Given a conference, return all sessions of a specified type (eg lecture, keynote, workshop)
     # getSessionsBySpeaker(speaker) -- Given a speaker, return all sessions given by this particular speaker, across all conferences
     
 
-    # createSession(SessionForm, websafeConferenceKey) -- open only to the organizer of the conference
     # heavily borrowed from _createConference
     @endpoints.method(SESSION_CREATE, SessionForm, path='conference/{websafeConferenceKey}/session',
             http_method='POST', name='createSession')
     def createSession(self, request):
         """Create new session - need user logged in and a valid Conference key"""
-        # For testing purposes, here's the conference key for the ComiCon conference entered locally:
-        # ahtkZXZ-dWRhY2l0eS1jb25mLXByb2plY3QtcDJyMQsSB1Byb2ZpbGUiFG1pY2tAbWlja3RyYXZlbHMuY29tDAsSCkNvbmZlcmVuY2UYAQw
-        # preload necessary data items
-
         user = endpoints.get_current_user()
         if not user:
             raise endpoints.UnauthorizedException('Authorization required')
@@ -653,5 +654,20 @@ class ConferenceApi(remote.Service):
             setattr(sf, 'conferenceName', confName)
         sf.check_initialized()
         return sf
+
+
+    @endpoints.method(SESSIONS_GET, SessionForms, path='conference/{websafeConferenceKey}/sessions',
+            http_method='POST', name='getConferenceSessions')
+    def getConferenceSessions(self, request):
+        """Return sessions in a given conference"""
+        conf = ndb.Key(urlsafe=request.websafeConferenceKey).get()
+        if not conf:
+            raise endpoints.NotFoundException('No conference found with that key')
+
+        sessions = Session.query(Session.websafeKey == request.websafeConferenceKey)
+        return SessionForms(
+            items=[self._copySessionToForm(session, conf.name) for session in sessions]
+        )
+
 
 api = endpoints.api_server([ConferenceApi]) # register API
