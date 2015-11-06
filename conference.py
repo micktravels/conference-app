@@ -109,6 +109,10 @@ SESSIONS_GETBYTYPE = endpoints.ResourceContainer(
     type=messages.StringField(2),
 )
 
+SESSIONS_GETBYSPEAKER = endpoints.ResourceContainer(
+    SessionForms, 
+    speaker=messages.StringField(1),
+)
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 
@@ -577,12 +581,7 @@ class ConferenceApi(remote.Service):
 
 
 # - - - Sessions - - - - - - - - - - - - - - - - - - - -
-
-
     
-    # getSessionsBySpeaker(speaker) -- Given a speaker, return all sessions given by this particular speaker, across all conferences
-    
-
     # heavily borrowed from _createConference
     @endpoints.method(SESSION_CREATE, SessionForm, path='conference/{websafeConferenceKey}/session',
             http_method='POST', name='createSession')
@@ -676,8 +675,6 @@ class ConferenceApi(remote.Service):
         )
 
 
-# getConferenceSessionsByType(websafeConferenceKey, typeOfSession) Given a conference,
-# return all sessions of a specified type (eg lecture, keynote, workshop)
     @endpoints.method(SESSIONS_GETBYTYPE, SessionForms, path='conference/{websafeConferenceKey}/sessions/{type}',
             http_method='POST', name='getConferenceSessionsByType')
     def getConferenceSessionsByType(self, request):
@@ -690,6 +687,21 @@ class ConferenceApi(remote.Service):
         sessions = sessions.filter(Session.typeOfSession == request.type)
         return SessionForms(
             items=[self._copySessionToForm(session, conf.name) for session in sessions]
+        )
+
+
+    # getSessionsBySpeaker(speaker) -- Given a speaker, return all sessions given by this particular speaker, across all conferences
+    @endpoints.method(SESSIONS_GETBYSPEAKER, SessionForms, path='conference/sessions/{speaker}',
+            http_method='POST', name='getConferenceSessionsBySpeaker')
+    def getConferenceSessionsBySpeaker(self, request):
+        sessions = Session.query(Session.speaker == request.speaker)
+        conferences = [(ndb.Key(urlsafe=session.websafeKey)).get() for session in sessions]
+        conferenceNames = {}
+        for conf in conferences:
+            conferenceNames[conf.key.urlsafe()] = conf.name
+
+        return SessionForms(
+            items=[self._copySessionToForm(session, conferenceNames[session.websafeKey]) for session in sessions]
         )
 
 
