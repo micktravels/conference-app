@@ -742,22 +742,30 @@ class ConferenceApi(remote.Service):
         # remove from WishList
         else:
             # make sure the session is in their wishlist
-            retval = False
             if wssk in prof.sessionWishlistKeys:
-                prof.conferenceKeysToAttend.remove(wssk)
+                prof.sessionWishlistKeys.remove(wssk)
                 retval = True
+            else:
+                raise ConflictException(
+                    "That session does not exist in your wishlist")
 
         # write things back to the datastore & return
         prof.put()
         return BooleanMessage(data=retval)
 
     @endpoints.method(SESSION_WISHLIST, BooleanMessage,
-            path='wishlist/{websafeSessionKey}',
+            path='wishlist/{websafeSessionKey}/add',
             http_method='POST', name='addSessionToWishlist')
     def addSessionToWishlist(self, request):
         """Add Session to user's Wishlist"""
         return self._wishlistToggle(request, add=True)
 
+    @endpoints.method(SESSION_WISHLIST, BooleanMessage,
+            path='wishlist/{websafeSessionKey}/remove',
+            http_method='POST', name='removeSessionFromWishlist')
+    def removeSessionFromWishlist(self, request):
+        """Remove Session from user's Wishlist"""
+        return self._wishlistToggle(request, add=False)
 
     # getSessionsInWishlist() -- query for all the sessions in a conference that the user is interested in
 
