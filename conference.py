@@ -753,12 +753,14 @@ class ConferenceApi(remote.Service):
         prof.put()
         return BooleanMessage(data=retval)
 
+
     @endpoints.method(SESSION_WISHLIST, BooleanMessage,
             path='wishlist/{websafeSessionKey}/add',
             http_method='POST', name='addSessionToWishlist')
     def addSessionToWishlist(self, request):
         """Add Session to user's Wishlist"""
         return self._wishlistToggle(request, add=True)
+
 
     @endpoints.method(SESSION_WISHLIST, BooleanMessage,
             path='wishlist/{websafeSessionKey}/remove',
@@ -767,7 +769,24 @@ class ConferenceApi(remote.Service):
         """Remove Session from user's Wishlist"""
         return self._wishlistToggle(request, add=False)
 
-    # getSessionsInWishlist() -- query for all the sessions in a conference that the user is interested in
 
+    # getSessionsInWishlist() -- query for all the sessions in a conference that the user is interested in
+    @endpoints.method(message_types.VoidMessage, SessionForms,
+            path='wishlist',
+            http_method='GET', name='getSessionsInWishlist')
+    def getSessionsInWishlist(self, request):
+        """Get Sessions from user's Wishlist"""
+        prof = self._getProfileFromUser() # get user Profile
+        wish_keys = [ndb.Key(urlsafe=wssk) for wssk in prof.sessionWishlistKeys]
+        sessions = ndb.get_multi(wish_keys)
+
+        conferences = [(ndb.Key(urlsafe=session.websafeKey)).get() for session in sessions]
+        conferenceNames = {}
+        for conf in conferences:
+            conferenceNames[conf.key.urlsafe()] = conf.name
+        
+        return SessionForms(
+            items=[self._copySessionToForm(session, conferenceNames[session.websafeKey]) for session in sessions]
+        )
 
 api = endpoints.api_server([ConferenceApi]) # register API
