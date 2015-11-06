@@ -113,6 +113,12 @@ SESSIONS_GETBYSPEAKER = endpoints.ResourceContainer(
     SessionForms, 
     speaker=messages.StringField(1),
 )
+
+SESSION_WISHLIST = endpoints.ResourceContainer(
+    SessionForms, 
+    websafeSessionKey=messages.StringField(1),
+)
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 
@@ -653,8 +659,8 @@ class ConferenceApi(remote.Service):
                     setattr(sf, field.name, str(getattr(session, field.name)))
                 else:
                     setattr(sf, field.name, getattr(session, field.name))
-        #   elif field.name == "websafeKey":
-        #       setattr(sf, field.name, session.key.urlsafe())
+            elif field.name == "websafeSessionKey":
+                setattr(sf, field.name, session.key.urlsafe())
         if confName:
             setattr(sf, 'conferenceName', confName)
         sf.check_initialized()
@@ -690,7 +696,6 @@ class ConferenceApi(remote.Service):
         )
 
 
-    # getSessionsBySpeaker(speaker) -- Given a speaker, return all sessions given by this particular speaker, across all conferences
     @endpoints.method(SESSIONS_GETBYSPEAKER, SessionForms, path='conference/sessions/{speaker}',
             http_method='POST', name='getConferenceSessionsBySpeaker')
     def getConferenceSessionsBySpeaker(self, request):
@@ -703,6 +708,58 @@ class ConferenceApi(remote.Service):
         return SessionForms(
             items=[self._copySessionToForm(session, conferenceNames[session.websafeKey]) for session in sessions]
         )
+
+
+# - - - Wishlist - - - - - - - - - - - - - - - - - - - -
+
+    # addSessionToWishlist(SessionKey) -- adds the session to the user's list of sessions they are interested in attending
+    #   You can decide if they can only add conference they have registered to attend or if the wishlist is open to all conferences.
+    
+    # heavily plagiarized from _conferenceRegistration
+    @ndb.transactional(xg=True)
+    def _wishlistToggle(self, request, add=True):
+        """Add or Delete session from user wishlist"""
+        retval = None
+        prof = self._getProfileFromUser() # get user Profile
+
+        wssk = request.websafeSessionKey
+        session = ndb.Key(urlsafe=wssk).get()
+        if not session:
+            raise endpoints.NotFoundException(
+                'No session found with key: %s' % wssk)        
+
+        # add to WishList
+        if add:
+            # check if user already has it on their wishlist otherwise add
+            if wssk in prof.sessionWishlistKeys:
+                raise ConflictException(
+                    "You already have that session in your wishlist")
+
+            # add session to wishlist
+            prof.sessionWishlistKeys.append(wssk)
+            retval = True
+
+        # remove from WishList
+        else:
+            # make sure the session is in their wishlist
+            retval = False
+            if wssk in prof.sessionWishlistKeys:
+                prof.conferenceKeysToAttend.remove(wssk)
+                retval = True
+
+        # write things back to the datastore & return
+        prof.put()
+        return BooleanMessage(data=retval)
+
+    @endpoints.method(SESSION_WISHLIST, BooleanMessage,
+            path='wishlist/{websafeSessionKey}',
+            http_method='POST', name='addSessionToWishlist')
+    def addSessionToWishlist(self, request):
+        """Add Session to user's Wishlist"""
+        return self._wishlistToggle(request, add=True)
+
+
+    # getSessionsInWishlist() -- query for all the sessions in a conference that the user is interested in
 
 
 api = endpoints.api_server([ConferenceApi]) # register API

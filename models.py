@@ -23,22 +23,24 @@ class ConflictException(endpoints.ServiceException):
 
 class Profile(ndb.Model):
     """Profile -- User profile object"""
-    displayName = ndb.StringProperty()
-    mainEmail = ndb.StringProperty()
-    teeShirtSize = ndb.StringProperty(default='NOT_SPECIFIED')
-    conferenceKeysToAttend = ndb.StringProperty(repeated=True)
+    displayName             = ndb.StringProperty()
+    mainEmail               = ndb.StringProperty()
+    teeShirtSize            = ndb.StringProperty(default='NOT_SPECIFIED')
+    conferenceKeysToAttend  = ndb.StringProperty(repeated=True)
+    sessionWishlistKeys     = ndb.StringProperty(repeated=True)
 
 class ProfileMiniForm(messages.Message):
     """ProfileMiniForm -- update Profile form message"""
-    displayName = messages.StringField(1)
-    teeShirtSize = messages.EnumField('TeeShirtSize', 2)
+    displayName             = messages.StringField(1)
+    teeShirtSize            = messages.EnumField('TeeShirtSize', 2)
 
 class ProfileForm(messages.Message):
     """ProfileForm -- Profile outbound form message"""
-    displayName = messages.StringField(1)
-    mainEmail = messages.StringField(2)
-    teeShirtSize = messages.EnumField('TeeShirtSize', 3)
-    conferenceKeysToAttend = messages.StringField(4, repeated=True)
+    displayName             = messages.StringField(1)
+    mainEmail               = messages.StringField(2)
+    teeShirtSize            = messages.EnumField('TeeShirtSize', 3)
+    conferenceKeysToAttend  = messages.StringField(4, repeated=True)
+    sessionWishlistKeys     = messages.StringField(5, repeated=True)
 
 class StringMessage(messages.Message):
     """StringMessage-- outbound (single) string message"""
@@ -130,8 +132,10 @@ class SessionForm(messages.Message):
     startTime       = messages.StringField(7)
     websafeKey      = messages.StringField(8)
     conferenceName  = messages.StringField(9)
+    websafeSessionKey = messages.StringField(10)
 
 # copied from ConferenceForms
 class SessionForms(messages.Message):
     """SessionForms -- multiple Session outbound form message"""
     items = messages.MessageField(SessionForm, 1, repeated=True)
+
