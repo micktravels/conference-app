@@ -1,0 +1,28 @@
+This document is a supplementary guide to the conference.py app.
+It explains the design choices in each of the four tasks.
+
+TASK 1:  ADD SESSIONS TO CONFERENCE
+There is a direct analogy between user-conference and conference-session.
+Code was heavily borrowed from the Conference Objects section of the app.
+Noteable modifications include:
+  * New Session, SessionForm and SessionForms classes in models.py.
+    The Session class stores a websafekey of the parent conference
+    The SessionForm(s) additionally takes a websafekey of the Session
+	just like ConferenceForm(s) does with it own websafekeys.
+	It also holds the conference name for user convenience.
+    I used a DateProperty for the Session Date and a TimeProperty for
+	the session startTime.
+  * createSession differs from createConference in a few ways:
+    Special logic to convert dates and times to DateProperty and TimeProperty
+	in the new createSession method
+    No internal _create function for a shell to call.  Just do it all in one.
+    Verify that the session date falls within the conference
+    The session keys are built with conference key as parent
+
+TASK 2:  ADD SESSIONS TO USER WISHLIST
+This task is analogous to conference registration, from where I borrowed
+a lot of the code.
+Noteable modifications include:
+  * Profile class modified to include a Session Wishlist.  This is a
+    repeatable field of session websafekeys
+  * Added both an add-to and remove-from wishlist functions for convenience
