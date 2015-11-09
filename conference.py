@@ -662,13 +662,12 @@ class ConferenceApi(remote.Service):
         # convert dates/times from strings to Date objects
         if data['date']:
             data['date'] = datetime.strptime(data['date'][:10], "%Y-%m-%d").date()
+            if data['date'] < conf.startDate or data['date'] > conf.endDate:
+                raise endpoints.BadRequestException("Session date not within conference's range")
 
         if data['startTime']:
             data['startTime'] = datetime.strptime(data['startTime'][:5], "%H:%M").time()
             print data['startTime']
-
-        if data['date'] < conf.startDate or data['date'] > conf.endDate:
-            raise endpoints.BadRequestException("Session date not within conference's range")
 
         # generate Profile Key based on user ID and Conference
         # ID based on Profile key get Conference key from ID
