@@ -14,6 +14,7 @@ __author__ = 'wesc+api@google.com (Wesley Chun)'
 
 
 from datetime import datetime
+from datetime import time
 
 import endpoints
 from protorpc import messages
@@ -117,6 +118,11 @@ SESSIONS_GETBYSPEAKER = endpoints.ResourceContainer(
 SESSION_WISHLIST = endpoints.ResourceContainer(
     SessionForms, 
     websafeSessionKey=messages.StringField(1),
+)
+
+CONF_GET_CITY = endpoints.ResourceContainer(
+    message_types.VoidMessage,
+    city=messages.StringField(1),
 )
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -589,7 +595,7 @@ class ConferenceApi(remote.Service):
 # - - - Sessions - - - - - - - - - - - - - - - - - - - -
     
     # heavily borrowed from _createConference
-    @endpoints.method(SESSION_CREATE, SessionForm, path='conference/{websafeConferenceKey}/session',
+    @endpoints.method(SESSION_CREATE, BooleanMessage, path='conference/{websafeConferenceKey}/session',
             http_method='POST', name='createSession')
     def createSession(self, request):
         """Create new session - need user logged in and a valid Conference key"""
@@ -612,6 +618,7 @@ class ConferenceApi(remote.Service):
 
         # copy SessionForm/ProtoRPC Message into dict
         data = {field.name: getattr(request, field.name) for field in request.all_fields()}
+        del data['websafeSessionKey']        # how did that get in there?
         del data['websafeConferenceKey']        # how did that get in there?
         del data['conferenceName']              # in the form, but not the datastore class
         
@@ -645,12 +652,12 @@ class ConferenceApi(remote.Service):
         # create Session in datastore
         print data.items()
         Session(**data).put()
-        return self._copySessionToForm(data, conf.name)
+        return BooleanMessage(data=True)
+        # return self._copySessionToForm(data, conf.name)
 
     # Heavily plagiarized from _copyConferenceToForm()
     def _copySessionToForm(self, session, confName):
         """Copy relevant fields from Session to SessionForm."""
-        print "DEBUG: _copySessionToForm ENTERED"
         sf = SessionForm()
         for field in sf.all_fields():
             if hasattr(session, field.name):
@@ -660,6 +667,8 @@ class ConferenceApi(remote.Service):
                 else:
                     setattr(sf, field.name, getattr(session, field.name))
             elif field.name == "websafeSessionKey":
+                print "DEBUG: _copySessionToForm field.name = " + field.name
+                print "DEBUG: _copySessionToForm urlsafe = " + session.key.urlsafe()
                 setattr(sf, field.name, session.key.urlsafe())
         if confName:
             setattr(sf, 'conferenceName', confName)
@@ -788,5 +797,32 @@ class ConferenceApi(remote.Service):
         return SessionForms(
             items=[self._copySessionToForm(session, conferenceNames[session.websafeKey]) for session in sessions]
         )
+
+
+# - - - More Queries - - - - - - - - - - - - - - - - - - - -
+
+    @endpoints.method(CONF_GET_CITY, ConferenceForms,
+            path='conference/city/{city}',
+            http_method='GET', name='getConferencesInCity')
+    def getConferencesInCity(self, request):
+        """Get Conferences in City"""
+        conferences = Conference.query()
+        conferences = conferences.filter(Conference.city == request.city)
+
+        return ConferenceForms(
+            items=[self._copyConferenceToForm(conf, "") for conf in conferences]
+        )
+
+
+    @endpoints.method(SESSIONS_GET, SessionForms,
+        path='conference/{websafeConferenceKey}/sessions/sleep-in',
+        http_method='GET', name='getSessionsSleepIn')
+    def getSessionsSleepIn(self, request):
+        """Sessions you can still attend after a night of partying"""
+        conf = ndb.Key(urlsafe=request.websafeConferenceKey).get()
+        sessions = Session.query(Session.startTime >= time(10,0,0,0))
+
+        return SessionForms(
+            items=[self._copySessionToForm(session, conf.name) for session in sessions])
 
 api = endpoints.api_server([ConferenceApi]) # register API

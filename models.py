@@ -53,7 +53,7 @@ class BooleanMessage(messages.Message):
 class Conference(ndb.Model):
     """Conference -- Conference object"""
     name            = ndb.StringProperty(required=True)
-    description     = ndb.StringProperty()
+    description     = ndb.StringProperty(indexed=False)
     organizerUserId = ndb.StringProperty()
     topics          = ndb.StringProperty(repeated=True)
     city            = ndb.StringProperty()
@@ -113,7 +113,7 @@ class ConferenceQueryForms(messages.Message):
 class Session(ndb.Model):
     """Session -- Session object"""
     name            = ndb.StringProperty(required=True)
-    highlights      = ndb.StringProperty()
+    highlights      = ndb.StringProperty(indexed=False)
     speaker         = ndb.StringProperty()
     duration        = ndb.IntegerProperty()  # in minutes
     typeOfSession   = ndb.StringProperty()

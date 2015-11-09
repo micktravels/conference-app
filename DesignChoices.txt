@@ -26,3 +26,8 @@ Noteable modifications include:
   * Profile class modified to include a Session Wishlist.  This is a
     repeatable field of session websafekeys
   * Added both an add-to and remove-from wishlist functions for convenience
+
+TASK 3:  WORK ON INDEXES AND QUERIES
+Two new queries that my conference.py app supports:
+  1) List all conferences in a given city
+  2) List all sessions that begin after 10:00a in case you want to sleep in
