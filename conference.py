@@ -51,8 +51,10 @@ from utils import getUserId
 EMAIL_SCOPE = endpoints.EMAIL_SCOPE
 API_EXPLORER_CLIENT_ID = endpoints.API_EXPLORER_CLIENT_ID
 MEMCACHE_ANNOUNCEMENTS_KEY = "RECENT_ANNOUNCEMENTS"
+MEMCACHE_FEATURED_SPEAKER_KEY = "FEATURED_SPEAKER"
 ANNOUNCEMENT_TPL = ('Last chance to attend! The following conferences '
                     'are nearly sold out: %s')
+SPEAKER_TPL = ('See %s speaking at %s.')
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -481,6 +483,35 @@ class ConferenceApi(remote.Service):
         return StringMessage(data=memcache.get(MEMCACHE_ANNOUNCEMENTS_KEY) or "")
 
 
+    @staticmethod
+    def _cacheFeaturedSpeaker(speaker, ancestor_key):
+        """When a new session is added to a conference, check the speaker.
+        If there is more than one session by this speaker at this conference, 
+        add a new Memcache entry that features the speaker and session names.
+        """
+        # Need strong consistency here because our query needs to capture the put that brought us here
+        sessions = Session.query(ancestor=ancestor_key)
+        sessions = sessions.filter(Session.speaker == speaker)
+        total = sessions.count()
+        print "DEBUG Featured Speaker:  total = " + str(total) + ", speaker = " + speaker
+
+        if total > 1:       # speaker has more than 1 session, so he's Featured
+            announcement = SPEAKER_TPL % (speaker, ', '.join(session.name for session in sessions))
+            memcache.set(MEMCACHE_FEATURED_SPEAKER_KEY, announcement)
+        else:
+            announcement = ""
+            memcache.delete(MEMCACHE_ANNOUNCEMENTS_KEY)
+
+        return announcement
+
+
+    @endpoints.method(message_types.VoidMessage, StringMessage,
+            path='conference/featuredspeaker/get',
+            http_method='GET', name='getFeaturedSpeaker')
+    def getFeaturedSpeaker(self, request):
+        """Return Featured Speaker notification from memcache."""
+        return StringMessage(data=memcache.get(MEMCACHE_FEATURED_SPEAKER_KEY) or "")
+
 # - - - Registration - - - - - - - - - - - - - - - - - - - -
 
     @ndb.transactional(xg=True)
@@ -652,6 +683,8 @@ class ConferenceApi(remote.Service):
         # create Session in datastore
         print data.items()
         Session(**data).put()
+        # Check for speaker in more than one session
+        self._cacheFeaturedSpeaker(data['speaker'], c_key)
         return BooleanMessage(data=True)
         # return self._copySessionToForm(data, conf.name)
 

@@ -33,3 +33,13 @@ Two new queries that my conference.py app supports:
   2) List all sessions that begin after 10:00a in case you want to sleep in
 For the 3rd new query there are two inequalities.  To solve this I simply
   order and filter for one of them, then programmatically filter out the other.
+
+TASK 4:  ADD A TASK
+The additional memcache functionality here is analogous to the announcements
+  that a particular conference is almost full.  Except that the Featured
+  Speaker method call is not initiated by a cron job, rather a createSession
+  call.
+The only tricky thing here is that a new session would ordinarily be an
+  eventual database consistency and not be part of the query looking for
+  a speaker at more than one session.  So an ancestral key query is needed
+  to enforce a strong consistency.
