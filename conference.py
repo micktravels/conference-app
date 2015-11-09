@@ -471,12 +471,12 @@ class ConferenceApi(remote.Service):
         sessions = sessions.filter(Session.speaker == speaker)
         total = sessions.count()
 
-        if total > 1:       # speaker has more than 1 session, so he's Featured
+        if total > 1 and speaker:       # speaker has more than 1 session, so he's Featured
             announcement = SPEAKER_TPL % (speaker, ', '.join(session.name for session in sessions))
             memcache.set(MEMCACHE_FEATURED_SPEAKER_KEY, announcement)
         else:
             announcement = ""
-            memcache.delete(MEMCACHE_ANNOUNCEMENTS_KEY)
+            memcache.delete(MEMCACHE_FEATURED_SPEAKER_KEY)
 
         return announcement
 
@@ -691,6 +691,7 @@ class ConferenceApi(remote.Service):
             raise endpoints.NotFoundException('No conference found with that key')
 
         sessions = Session.query(Session.websafeKey == request.websafeConferenceKey)
+        sessions = sessions.order(Session.startTime)
         return SessionForms(
             items=[self._copySessionToForm(session, conf.name) for session in sessions]
         )
