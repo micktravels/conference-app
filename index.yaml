@@ -24,3 +24,8 @@ indexes:
   properties:
   - name: typeOfSession
   - name: startTime
+
+- kind: Session
+  properties:
+  - name: websafeKey
+  - name: startTime
