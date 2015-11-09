@@ -820,9 +820,31 @@ class ConferenceApi(remote.Service):
     def getSessionsSleepIn(self, request):
         """Sessions you can still attend after a night of partying"""
         conf = ndb.Key(urlsafe=request.websafeConferenceKey).get()
-        sessions = Session.query(Session.startTime >= time(10,0,0,0))
+        sessions = Session.query()
+        sessions = sessions.order(Session.startTime)
+        sessions = sessions.filter(Session.startTime >= time(10,0,0,0))
 
         return SessionForms(
             items=[self._copySessionToForm(session, conf.name) for session in sessions])
+
+
+    @endpoints.method(SESSIONS_GET, SessionForms,
+        path='conference/{websafeConferenceKey}/sessions/daytime',
+        http_method='GET', name='avoidLateAndWorkshops')
+    def avoidLateAndWorkshops(self, request):
+        """Get non-workshop sessions before 7 pm"""
+        conf = ndb.Key(urlsafe=request.websafeConferenceKey).get()
+        sessions = Session.query()
+        sessions = sessions.order(Session.startTime)
+        sessions = sessions.filter(Session.startTime < time(19,0,0,0))
+        # can't filter twice for inequalities, so do the second one programatically
+        items =[]
+        for session in sessions:
+            if session.typeOfSession != 'Workshop':
+                items.append(self._copySessionToForm(session, conf.name))
+
+        return SessionForms(items=items)
+
+
 
 api = endpoints.api_server([ConferenceApi]) # register API
