@@ -804,15 +804,12 @@ class ConferenceApi(remote.Service):
         wish_keys = [ndb.Key(urlsafe=wssk) for wssk in prof.sessionWishlistKeys]
         sessions = ndb.get_multi(wish_keys)
 
-        conferences = [(ndb.Key(urlsafe=session.websafeKey)).get() for session in sessions]
-        conferenceNames = {}
-        for conf in conferences:
-            conferenceNames[conf.key.urlsafe()] = conf.name
-
-        return SessionForms(
-            items=[self._copySessionToForm(session, conferenceNames[session.websafeKey]) for session in sessions]
-        )
-
+        items = []
+        for session in sessions:
+            conf_key = session.key.parent()
+            conference = conf_key.get()
+            items.append(self._copySessionToForm(session, conference.name))
+        return SessionForms(items=items)
 
 # - - - More Queries - - - - - - - - - - - - - - - - - - - -
 
@@ -849,7 +846,9 @@ class ConferenceApi(remote.Service):
     def avoidLateAndWorkshops(self, request):
         """Get non-workshop sessions before 7 pm"""
         conf = ndb.Key(urlsafe=request.websafeConferenceKey).get()
-        sessions = Session.query(Session.websafeKey == request.websafeConferenceKey)
+        ancestor_key = ndb.Key(urlsafe=request.websafeConferenceKey)
+        sessions = Session.query(ancestor=ancestor_key)
+        # sessions = Session.query(Session.websafeKey == request.websafeConferenceKey)
         sessions = sessions.order(Session.startTime)
         sessions = sessions.filter(Session.startTime < time(19, 0, 0, 0))
         # can't filter twice for inequalities, so do the second one programatically
