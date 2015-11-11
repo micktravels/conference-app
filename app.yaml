@@ -42,6 +42,9 @@ handlers:       # static then dynamic
   script: main.app
   login: admin
 
+- url: /tasks/check_featured_speaker
+  script: main.app
+  login: admin
 
 libraries:
 

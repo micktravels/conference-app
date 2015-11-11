@@ -461,12 +461,13 @@ class ConferenceApi(remote.Service):
 
 
     @staticmethod
-    def _cacheFeaturedSpeaker(speaker, ancestor_key):
+    def _cacheFeaturedSpeaker(speaker, websafeConferenceKey):
         """When a new session is added to a conference, check the speaker.
         If there is more than one session by this speaker at this conference,
         add a new Memcache entry that features the speaker and session names.
         """
         # Need strong consistency here because our query needs to capture the put that brought us here
+        ancestor_key = ndb.Key(urlsafe=websafeConferenceKey)
         sessions = Session.query(ancestor=ancestor_key)
         sessions = sessions.filter(Session.speaker == speaker)
         total = sessions.count()
@@ -657,7 +658,12 @@ class ConferenceApi(remote.Service):
         print data.items()
         Session(**data).put()
         # Check for speaker in more than one session
-        self._cacheFeaturedSpeaker(data['speaker'], c_key)
+        # For the record, beyond getting practice with the task queue (which is great), I don't see why this
+        # particular function would need or benefit from using the task queue.  Perhaps this Task 4 is a little
+        # contrived.  Especially when you consider that task queues are good for things that can be delayed, 
+        # and that what this particular task is doing requires immediate response from the datastore.
+        taskqueue.add(params={'speaker': data['speaker'], 'confKey': request.websafeConferenceKey},
+            url='/tasks/check_featured_speaker')
         return BooleanMessage(data=True)
         # return self._copySessionToForm(data, conf.name)
 
