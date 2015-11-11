@@ -478,8 +478,7 @@ class ConferenceApi(remote.Service):
         else:
             announcement = ""
             memcache.delete(MEMCACHE_FEATURED_SPEAKER_KEY)
-
-        return announcement
+        return
 
 
     @endpoints.method(message_types.VoidMessage, StringMessage,
@@ -689,14 +688,16 @@ class ConferenceApi(remote.Service):
 
 
     @endpoints.method(SESSIONS_GET, SessionForms, path='conference/{websafeConferenceKey}/sessions',
-            http_method='POST', name='getConferenceSessions')
+            http_method='GET', name='getConferenceSessions')
     def getConferenceSessions(self, request):
         """Return sessions in a given conference"""
         conf = ndb.Key(urlsafe=request.websafeConferenceKey).get()
         if not conf:
             raise endpoints.NotFoundException('No conference found with that key')
 
-        sessions = Session.query(Session.websafeKey == request.websafeConferenceKey)
+        ancestor_key = ndb.Key(urlsafe=request.websafeConferenceKey)
+        sessions = Session.query(ancestor=ancestor_key)
+        #sessions = Session.query(Session.websafeKey == request.websafeConferenceKey)
         sessions = sessions.order(Session.startTime)
         return SessionForms(
             items=[self._copySessionToForm(session, conf.name) for session in sessions]
@@ -711,7 +712,9 @@ class ConferenceApi(remote.Service):
         if not conf:
             raise endpoints.NotFoundException('No conference found with that key')
 
-        sessions = Session.query(Session.websafeKey == request.websafeConferenceKey)
+        ancestor_key = ndb.Key(urlsafe=request.websafeConferenceKey)
+        sessions = Session.query(ancestor=ancestor_key)
+        # sessions = Session.query(Session.websafeKey == request.websafeConferenceKey)
         sessions = sessions.filter(Session.typeOfSession == request.type)
         return SessionForms(
             items=[self._copySessionToForm(session, conf.name) for session in sessions]
@@ -722,14 +725,13 @@ class ConferenceApi(remote.Service):
             http_method='POST', name='getConferenceSessionsBySpeaker')
     def getConferenceSessionsBySpeaker(self, request):
         sessions = Session.query(Session.speaker == request.speaker)
-        conferences = [(ndb.Key(urlsafe=session.websafeKey)).get() for session in sessions]
-        conferenceNames = {}
-        for conf in conferences:
-            conferenceNames[conf.key.urlsafe()] = conf.name
 
-        return SessionForms(
-            items=[self._copySessionToForm(session, conferenceNames[session.websafeKey]) for session in sessions]
-        )
+        items = []
+        for session in sessions:
+            conf_key = session.key.parent()
+            conference = conf_key.get()
+            items.append(self._copySessionToForm(session, conference.name))
+        return SessionForms(items=items)
 
 
 # - - - Wishlist - - - - - - - - - - - - - - - - - - - -
