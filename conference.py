@@ -747,7 +747,8 @@ class ConferenceApi(remote.Service):
         prof = self._getProfileFromUser()  # get user Profile
 
         wssk = request.websafeSessionKey
-        session = ndb.Key(urlsafe=wssk).get()
+        s_key = ndb.Key(urlsafe=wssk)
+        session = s_key.get()
         if not session:
             raise endpoints.NotFoundException(
                 'No session found with key: %s' % wssk)
@@ -760,14 +761,14 @@ class ConferenceApi(remote.Service):
                     "You already have that session in your wishlist")
 
             # add session to wishlist
-            prof.sessionWishlistKeys.append(wssk)
+            prof.sessionWishlistKeys.append(s_key)
             retval = True
 
         # remove from WishList
         else:
             # make sure the session is in their wishlist
-            if wssk in prof.sessionWishlistKeys:
-                prof.sessionWishlistKeys.remove(wssk)
+            if s_key in prof.sessionWishlistKeys:
+                prof.sessionWishlistKeys.remove(s_key)
                 retval = True
             else:
                 raise ConflictException(
@@ -801,8 +802,8 @@ class ConferenceApi(remote.Service):
     def getSessionsInWishlist(self, request):
         """Get Sessions from user's Wishlist"""
         prof = self._getProfileFromUser()  # get user Profile
-        wish_keys = [ndb.Key(urlsafe=wssk) for wssk in prof.sessionWishlistKeys]
-        sessions = ndb.get_multi(wish_keys)
+        # wish_keys = [ndb.Key(urlsafe=wssk) for wssk in prof.sessionWishlistKeys]
+        sessions = ndb.get_multi(prof.sessionWishlistKeys)
 
         items = []
         for session in sessions:
