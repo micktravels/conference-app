@@ -119,7 +119,7 @@ class Session(ndb.Model):
     typeOfSession   = ndb.StringProperty()
     date            = ndb.DateProperty() 
     startTime       = ndb.TimeProperty()  # in 24-hour notation
-    websafeKey      = ndb.StringProperty()  # key of the parent conference, will be passed as part of URL
+    # websafeKey      = ndb.StringProperty()  # key of the parent conference, will be passed as part of URL
 
 class SessionForm(messages.Message):
     """SessionForm -- Session outbound form message"""
