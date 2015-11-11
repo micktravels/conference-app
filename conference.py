@@ -646,7 +646,7 @@ class ConferenceApi(remote.Service):
 
         # generate Profile Key based on user ID and Conference
         # ID based on Profile key get Conference key from ID
-        data['websafeKey'] = request.websafeConferenceKey
+        # data['websafeKey'] = request.websafeConferenceKey
         p_key = ndb.Key(Profile, user_id)
         c_key = ndb.Key(urlsafe=request.websafeConferenceKey)
         s_id = Session.allocate_ids(size=1, parent=c_key)[0]
