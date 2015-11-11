@@ -262,7 +262,7 @@ class ConferenceApi(remote.Service):
 
     @endpoints.method(message_types.VoidMessage, ConferenceForms,
             path='getConferencesCreated',
-            http_method='POST', name='getConferencesCreated')
+            http_method='GET', name='getConferencesCreated')
     def getConferencesCreated(self, request):
         """Return conferences created by user."""
         # make sure user is authed
@@ -705,7 +705,7 @@ class ConferenceApi(remote.Service):
 
 
     @endpoints.method(SESSIONS_GETBYTYPE, SessionForms, path='conference/{websafeConferenceKey}/sessions/{type}',
-            http_method='POST', name='getConferenceSessionsByType')
+            http_method='GET', name='getConferenceSessionsByType')
     def getConferenceSessionsByType(self, request):
         """Return sessions in a given conference of a particular type"""
         conf = ndb.Key(urlsafe=request.websafeConferenceKey).get()
@@ -722,7 +722,7 @@ class ConferenceApi(remote.Service):
 
 
     @endpoints.method(SESSIONS_GETBYSPEAKER, SessionForms, path='conference/sessions/{speaker}',
-            http_method='POST', name='getConferenceSessionsBySpeaker')
+            http_method='GET', name='getConferenceSessionsBySpeaker')
     def getConferenceSessionsBySpeaker(self, request):
         sessions = Session.query(Session.speaker == request.speaker)
 
